@@ -15,6 +15,9 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
     var mapView: GMSMapView?
     var tableView: UITableView = UITableView()
     
+    var listOfMainAddress: [String] = ["   "]
+    var listOfAddAddress: [String] = ["   "]
+    
     lazy var startAddress: UITextField =
     {
         let text = UITextField()
@@ -26,6 +29,7 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         text.layer.masksToBounds = true
         text.addTarget(self, action: #selector(appearHelpView), for: .editingDidBegin)
         text.addTarget(self, action: #selector(disappearHelpView), for: .editingDidEnd)
+        text.addTarget(self, action: #selector(changeLetters), for: .editingChanged)
         return text
     }()
     
@@ -39,9 +43,6 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         return view
     }()
     
-    
-    
-    let animals: [String] = ["1","2","3"]
     
     override func viewDidLoad()
     {
@@ -64,12 +65,14 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
 extension MapViewController
 {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 3
+        return listOfMainAddress.count
     }
     
     @objc(tableView:cellForRowAtIndexPath:) func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
-        cell.textLabel?.text = animals[indexPath.row]
+        cell.textLabel?.text = listOfMainAddress[indexPath.row]
+        cell.detailTextLabel?.text = listOfAddAddress[indexPath.row]
+        
         return cell
     }
 }
@@ -147,5 +150,52 @@ extension MapViewController
     func disappearHelpView()
     {
         helpView.isHidden = true
+    }
+    
+    func changeLetters()
+    {
+        let filter = GMSAutocompleteFilter()
+        filter.type = GMSPlacesAutocompleteTypeFilter.address
+        let b1 = CLLocationCoordinate2D(latitude: 56.912803, longitude: 40.788388)
+        let b2 = CLLocationCoordinate2D(latitude: 57.088364, longitude: 41.142119)
+        let bounds = GMSCoordinateBounds(coordinate: b1, coordinate: b2)
+        let placesClient = GMSPlacesClient()
+        placesClient.autocompleteQuery(startAddress.text!, bounds: bounds, filter: filter, callback:
+        {
+            (results, error) in
+            
+            if error != nil
+            {
+                print("error")
+                return
+            }
+            
+            self.listOfMainAddress.removeAll()
+            self.listOfAddAddress.removeAll()
+            
+            if results?.count == 0
+            {
+                self.listOfMainAddress.append("No")
+                self.listOfAddAddress.append(" ")
+            }
+            
+            for result in results!
+            {
+                self.listOfMainAddress.append(result.attributedPrimaryText.string)
+                self.listOfAddAddress.append((result.attributedSecondaryText?.string)!)
+                /*
+                let place = CLLocationCoordinate2D()
+                let marker = GMSMarker
+                marker.title = "Pozharka"
+                marker.map = mapView
+                */
+            }
+            
+            DispatchQueue.main.async(execute:
+            {
+                self.tableView.reloadData()
+            })
+            
+        })
     }
 }
