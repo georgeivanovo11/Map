@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import GoogleMaps
+import GooglePlaces
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate
@@ -21,6 +23,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate
         window?.makeKeyAndVisible()
         
         window?.rootViewController = UINavigationController(rootViewController: MapViewController())
+        
+        GMSServices.provideAPIKey("AIzaSyD-Wz-BjKvWSYNiz0pttubdFtuXlOocTeg")
+        GMSPlacesClient.provideAPIKey("AIzaSyD-Wz-BjKvWSYNiz0pttubdFtuXlOocTeg")
         return true
     }
 

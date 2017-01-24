@@ -8,6 +8,7 @@
 
 import UIKit
 import GoogleMaps
+import GooglePlaces
 
 class MapViewController: UIViewController
 {
@@ -32,8 +33,6 @@ class MapViewController: UIViewController
         view.backgroundColor = UIColor.white
         navigationItem.title = "Map"
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Hide", style: .plain , target: self, action: #selector(dismissKeyboard))
-        GMSServices.provideAPIKey("AIzaSyD-Wz-BjKvWSYNiz0pttubdFtuXlOocTeg")
-        //hideKeyboardWhenTap()
         
         //View
         setupMapView()
@@ -74,14 +73,7 @@ extension MapViewController
 }
 
 extension MapViewController
-{
-    func hideKeyboardWhenTap()
-    {
-        let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
-        //mapView?.addGestureRecognizer(tap)
-        view.addGestureRecognizer(tap)
-    }
-    
+{    
     func dismissKeyboard()
     {
         view.endEditing(true)
