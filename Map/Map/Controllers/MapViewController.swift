@@ -10,11 +10,12 @@ import UIKit
 import GoogleMaps
 import GooglePlaces
 
-class MapViewController: UIViewController
+class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataSource
 {
     var mapView: GMSMapView?
+    var tableView: UITableView = UITableView()
     
-    var startAddress: UITextField =
+    lazy var startAddress: UITextField =
     {
         let text = UITextField()
         text.backgroundColor = UIColor.white
@@ -23,8 +24,24 @@ class MapViewController: UIViewController
         text.translatesAutoresizingMaskIntoConstraints = false
         text.layer.cornerRadius = 10
         text.layer.masksToBounds = true
+        text.addTarget(self, action: #selector(appearHelpView), for: .editingDidBegin)
+        text.addTarget(self, action: #selector(disappearHelpView), for: .editingDidEnd)
         return text
     }()
+    
+    var helpView: UIView =
+    {
+        let view = UIView()
+        view.backgroundColor = UIColor.white
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    
+    
+    let animals: [String] = ["1","2","3"]
     
     override func viewDidLoad()
     {
@@ -37,10 +54,28 @@ class MapViewController: UIViewController
         //View
         setupMapView()
         setupStartAddress()
+        setupHelpView()
+        setupTable()
     }
-
 }
 
+
+//MARK: Table
+extension MapViewController
+{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 3
+    }
+    
+    @objc(tableView:cellForRowAtIndexPath:) func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
+        cell.textLabel?.text = animals[indexPath.row]
+        return cell
+    }
+}
+
+
+//MARK:  Views
 extension MapViewController
 {
     func setupMapView()
@@ -70,12 +105,47 @@ extension MapViewController
         startAddress.topAnchor.constraint(equalTo: view.topAnchor, constant: 70).isActive = true
         startAddress.heightAnchor.constraint(equalToConstant: 40).isActive = true
     }
+    
+    func setupHelpView()
+    {
+        view.addSubview(helpView)
+        helpView.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 5).isActive = true
+        helpView.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -5).isActive = true
+        helpView.topAnchor.constraint(equalTo: startAddress.bottomAnchor, constant: 5).isActive = true
+        helpView.heightAnchor.constraint(equalToConstant: 180).isActive = true
+        helpView.isHidden = true
+    }
+    
+    func setupTable()
+    {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        helpView.addSubview(tableView)
+        
+        tableView.leftAnchor.constraint(equalTo: helpView.leftAnchor, constant: 5).isActive = true
+        tableView.rightAnchor.constraint(equalTo: helpView.rightAnchor, constant: -5).isActive = true
+        tableView.topAnchor.constraint(equalTo: helpView.topAnchor, constant: 5).isActive = true
+        tableView.bottomAnchor.constraint(equalTo: helpView.bottomAnchor, constant: -5).isActive = true
+    }
 }
 
+//MARK: Actions
 extension MapViewController
 {    
     func dismissKeyboard()
     {
         view.endEditing(true)
+    }
+    
+    func appearHelpView()
+    {
+        helpView.isHidden = false
+    }
+    
+    func disappearHelpView()
+    {
+        helpView.isHidden = true
     }
 }
