@@ -15,8 +15,10 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
     var mapView: GMSMapView?
     var tableView: UITableView = UITableView()
     
-    var listOfMainAddress: [String] = ["   "]
-    var listOfAddAddress: [String] = ["   "]
+    var startPlace: GPlace?
+    var currentIndex: Int = -1
+    
+    var list: [Autocomplete] = []
     
     lazy var startAddress: UITextField =
     {
@@ -43,6 +45,25 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         return view
     }()
     
+    var buttonView: UIView =
+    {
+        let view = UIView()
+        view.backgroundColor = UIColor.white
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    lazy var button: UIButton =
+    {
+        let but = UIButton(type: .system)
+        but.setTitle("+", for: .normal)
+        but.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+        but.translatesAutoresizingMaskIntoConstraints = false
+        but.addTarget(self, action: #selector(pressButton), for: .touchUpInside)
+        return but
+    }()
     
     override func viewDidLoad()
     {
@@ -54,6 +75,7 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         
         //View
         setupMapView()
+        setupButtonView()
         setupStartAddress()
         setupHelpView()
         setupTable()
@@ -65,15 +87,22 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
 extension MapViewController
 {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return listOfMainAddress.count
+        return list.count
     }
     
-    @objc(tableView:cellForRowAtIndexPath:) func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    @objc(tableView:cellForRowAtIndexPath:) func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
+    {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
-        cell.textLabel?.text = listOfMainAddress[indexPath.row]
-        cell.detailTextLabel?.text = listOfAddAddress[indexPath.row]
+        cell.textLabel?.text = list[indexPath.row].primaryAddress
+        cell.detailTextLabel?.text = list[indexPath.row].secondaryAddress
         
         return cell
+    }
+    
+    @objc(tableView:didSelectRowAtIndexPath:) func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath)
+    {
+        startAddress.text = list[indexPath.row].primaryAddress
+        currentIndex = indexPath.row
     }
 }
 
@@ -100,11 +129,26 @@ extension MapViewController
         
     }
     
+    func setupButtonView()
+    {
+        view.addSubview(buttonView)
+        buttonView.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        buttonView.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -5).isActive = true
+        buttonView.topAnchor.constraint(equalTo: view.topAnchor, constant: 70).isActive = true
+        buttonView.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        
+        buttonView.addSubview(button)
+        button.leftAnchor.constraint(equalTo: buttonView.leftAnchor).isActive = true
+        button.rightAnchor.constraint(equalTo: buttonView.rightAnchor).isActive = true
+        button.topAnchor.constraint(equalTo: buttonView.topAnchor).isActive = true
+        button.bottomAnchor.constraint(equalTo: buttonView.bottomAnchor).isActive = true
+    }
+    
     func setupStartAddress()
     {
         view.addSubview(startAddress)
         startAddress.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 5).isActive = true
-        startAddress.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -5).isActive = true
+        startAddress.rightAnchor.constraint(equalTo: buttonView.leftAnchor, constant: -5).isActive = true
         startAddress.topAnchor.constraint(equalTo: view.topAnchor, constant: 70).isActive = true
         startAddress.heightAnchor.constraint(equalToConstant: 40).isActive = true
     }
@@ -160,6 +204,7 @@ extension MapViewController
         let b2 = CLLocationCoordinate2D(latitude: 57.088364, longitude: 41.142119)
         let bounds = GMSCoordinateBounds(coordinate: b1, coordinate: b2)
         let placesClient = GMSPlacesClient()
+        
         placesClient.autocompleteQuery(startAddress.text!, bounds: bounds, filter: filter, callback:
         {
             (results, error) in
@@ -170,25 +215,14 @@ extension MapViewController
                 return
             }
             
-            self.listOfMainAddress.removeAll()
-            self.listOfAddAddress.removeAll()
-            
-            if results?.count == 0
-            {
-                self.listOfMainAddress.append("No")
-                self.listOfAddAddress.append(" ")
-            }
+            self.list.removeAll()
             
             for result in results!
             {
-                self.listOfMainAddress.append(result.attributedPrimaryText.string)
-                self.listOfAddAddress.append((result.attributedSecondaryText?.string)!)
-                /*
-                let place = CLLocationCoordinate2D()
-                let marker = GMSMarker
-                marker.title = "Pozharka"
-                marker.map = mapView
-                */
+                let a = result.attributedPrimaryText.string
+                let b = result.attributedSecondaryText?.string
+                let c = result.placeID
+                self.list.append(Autocomplete(ad1: a,ad2: b!,id1: c!))
             }
             
             DispatchQueue.main.async(execute:
@@ -197,5 +231,46 @@ extension MapViewController
             })
             
         })
+    }
+    
+    func pressButton()
+    {
+        if currentIndex == -1
+        {
+            print(currentIndex)
+            return
+        }
+        
+        let placesClient = GMSPlacesClient()
+        placesClient.lookUpPlaceID(list[currentIndex].id, callback:
+        {
+            (place, error) in
+         
+            if error != nil
+            {
+               print("error")
+               return
+            }
+         
+            guard let place = place
+            else
+            {
+               print("error")
+               return
+            }
+         
+            let a = self.list[self.currentIndex].primaryAddress
+            let b = self.list[self.currentIndex].secondaryAddress
+            let c = place
+            self.startPlace = GPlace(ad1: a!,ad2: b!,inf: c)
+            
+            let marker = GMSMarker(position: (self.startPlace?.info?.coordinate)!)
+            marker.title = self.startPlace?.primaryAddress
+            marker.map = self.mapView
+            self.mapView?.animate(with: GMSCameraUpdate.setTarget((self.startPlace?.info?.coordinate)!))
+         })
+        
+        dismissKeyboard()
+        disappearHelpView()
     }
 }
