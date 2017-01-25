@@ -16,7 +16,9 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
     var tableView: UITableView = UITableView()
     
     var startPlace: GPlace?
+    var finishPlace: GPlace?
     var currentIndex: Int = -1
+    var flag = 0
     
     var list: [Autocomplete] = []
     
@@ -35,6 +37,22 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         return text
     }()
     
+    lazy var finishAddress: UITextField =
+        {
+            let text = UITextField()
+            text.backgroundColor = UIColor.white
+            text.placeholder = "Место назначения..."
+            text.textAlignment = .center
+            text.translatesAutoresizingMaskIntoConstraints = false
+            text.layer.cornerRadius = 10
+            text.layer.masksToBounds = true
+            text.addTarget(self, action: #selector(appearHelpView), for: .editingDidBegin)
+            text.addTarget(self, action: #selector(disappearHelpView), for: .editingDidEnd)
+            text.addTarget(self, action: #selector(changeLetters), for: .editingChanged)
+            return text
+    }()
+    
+    var helpViewTopAnchor: NSLayoutConstraint?
     var helpView: UIView =
     {
         let view = UIView()
@@ -65,6 +83,26 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         return but
     }()
     
+    var button2View: UIView =
+        {
+            let view = UIView()
+            view.backgroundColor = UIColor.white
+            view.layer.cornerRadius = 10
+            view.layer.masksToBounds = true
+            view.translatesAutoresizingMaskIntoConstraints = false
+            return view
+    }()
+    
+    lazy var button2: UIButton =
+        {
+            let but = UIButton(type: .system)
+            but.setTitle("+", for: .normal)
+            but.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+            but.translatesAutoresizingMaskIntoConstraints = false
+            but.addTarget(self, action: #selector(pressButton2), for: .touchUpInside)
+            return but
+    }()
+    
     override func viewDidLoad()
     {
         //Settings
@@ -76,9 +114,11 @@ class MapViewController: UIViewController, UITableViewDelegate, UITableViewDataS
         //View
         setupMapView()
         setupButtonView()
+        setupButton2View()
         setupStartAddress()
         setupHelpView()
         setupTable()
+        setupFinishAddress()
     }
 }
 
@@ -101,7 +141,14 @@ extension MapViewController
     
     @objc(tableView:didSelectRowAtIndexPath:) func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     {
-        startAddress.text = list[indexPath.row].primaryAddress
+        if flag == 0
+        {
+            startAddress.text = list[indexPath.row].primaryAddress
+        }
+        else
+        {
+            finishAddress.text = list[indexPath.row].primaryAddress
+        }
         currentIndex = indexPath.row
     }
 }
@@ -144,6 +191,25 @@ extension MapViewController
         button.bottomAnchor.constraint(equalTo: buttonView.bottomAnchor).isActive = true
     }
     
+    func setupButton2View()
+    {
+        
+        view.addSubview(button2View)
+        button2View.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        button2View.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -5).isActive = true
+        button2View.topAnchor.constraint(equalTo: buttonView.bottomAnchor, constant: 5).isActive = true
+        button2View.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        
+        button2View.addSubview(button2)
+        button2.leftAnchor.constraint(equalTo: button2View.leftAnchor).isActive = true
+        button2.rightAnchor.constraint(equalTo: button2View.rightAnchor).isActive = true
+        button2.topAnchor.constraint(equalTo: button2View.topAnchor).isActive = true
+        button2.bottomAnchor.constraint(equalTo: button2View.bottomAnchor).isActive = true
+        
+        button2.isHidden = true
+        button2View.isHidden = true
+    }
+    
     func setupStartAddress()
     {
         view.addSubview(startAddress)
@@ -153,12 +219,23 @@ extension MapViewController
         startAddress.heightAnchor.constraint(equalToConstant: 40).isActive = true
     }
     
+    func setupFinishAddress()
+    {
+        view.addSubview(finishAddress)
+        finishAddress.isHidden = true
+        finishAddress.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 5).isActive = true
+        finishAddress.rightAnchor.constraint(equalTo: buttonView.leftAnchor, constant: -5).isActive = true
+        finishAddress.topAnchor.constraint(equalTo: startAddress.bottomAnchor, constant: 5).isActive = true
+        finishAddress.heightAnchor.constraint(equalToConstant: 40).isActive = true
+    }
+    
     func setupHelpView()
     {
         view.addSubview(helpView)
         helpView.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 5).isActive = true
         helpView.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -5).isActive = true
-        helpView.topAnchor.constraint(equalTo: startAddress.bottomAnchor, constant: 5).isActive = true
+        helpViewTopAnchor = helpView.topAnchor.constraint(equalTo: startAddress.bottomAnchor, constant: 5)
+        helpViewTopAnchor?.isActive = true
         helpView.heightAnchor.constraint(equalToConstant: 180).isActive = true
         helpView.isHidden = true
     }
@@ -188,6 +265,9 @@ extension MapViewController
     
     func appearHelpView()
     {
+        list.removeAll()
+        DispatchQueue.main.async(execute:{self.tableView.reloadData()})
+        currentIndex = -1
         helpView.isHidden = false
     }
     
@@ -205,7 +285,17 @@ extension MapViewController
         let bounds = GMSCoordinateBounds(coordinate: b1, coordinate: b2)
         let placesClient = GMSPlacesClient()
         
-        placesClient.autocompleteQuery(startAddress.text!, bounds: bounds, filter: filter, callback:
+        let address: String
+        if flag == 0
+        {
+            address = startAddress.text!
+        }
+        else
+        {
+            address = finishAddress.text!
+        }
+        
+        placesClient.autocompleteQuery(address, bounds: bounds, filter: filter, callback:
         {
             (results, error) in
             
@@ -263,12 +353,55 @@ extension MapViewController
             let b = self.list[self.currentIndex].secondaryAddress
             let c = place
             self.startPlace = GPlace(ad1: a!,ad2: b!,inf: c)
-            
-            let marker = GMSMarker(position: (self.startPlace?.info?.coordinate)!)
-            marker.title = self.startPlace?.primaryAddress
-            marker.map = self.mapView
+            self.startPlace?.marker?.map  = self.mapView
             self.mapView?.animate(with: GMSCameraUpdate.setTarget((self.startPlace?.info?.coordinate)!))
          })
+        
+        dismissKeyboard()
+        disappearHelpView()
+        finishAddress.isHidden = false
+        button2.isHidden = false
+        button2View.isHidden = false
+        
+        helpViewTopAnchor?.isActive = false
+        helpViewTopAnchor = helpView.topAnchor.constraint(equalTo: finishAddress.bottomAnchor, constant: 5)
+        helpViewTopAnchor?.isActive = true
+        flag = 1
+    }
+    
+    func pressButton2()
+    {
+        if currentIndex == -1
+        {
+            print(currentIndex)
+            return
+        }
+        
+        let placesClient = GMSPlacesClient()
+        placesClient.lookUpPlaceID(list[currentIndex].id, callback:
+            {
+                (place, error) in
+                
+                if error != nil
+                {
+                    print("error")
+                    return
+                }
+                
+                guard let place = place
+                    else
+                {
+                    print("error")
+                    return
+                }
+                
+                let a = self.list[self.currentIndex].primaryAddress
+                let b = self.list[self.currentIndex].secondaryAddress
+                let c = place
+                self.finishPlace = GPlace(ad1: a!,ad2: b!,inf: c)
+                self.finishPlace?.marker?.map  = self.mapView
+                self.mapView?.animate(with: GMSCameraUpdate.setTarget((self.finishPlace?.info?.coordinate)!))
+        })
         
         dismissKeyboard()
         disappearHelpView()
