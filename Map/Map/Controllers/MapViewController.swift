@@ -400,7 +400,19 @@ extension MapViewController
                 let c = place
                 self.finishPlace = GPlace(ad1: a!,ad2: b!,inf: c)
                 self.finishPlace?.marker?.map  = self.mapView
-                self.mapView?.animate(with: GMSCameraUpdate.setTarget((self.finishPlace?.info?.coordinate)!))
+                
+                let b1 = self.startPlace?.info?.coordinate
+                let b2 = self.finishPlace?.info?.coordinate
+                let bounds = GMSCoordinateBounds(coordinate: b1!, coordinate: b2!)
+                self.mapView?.animate(with: GMSCameraUpdate.fit(bounds))
+                
+                let call = "https://maps.googleapis.com/maps/api/directions/json?"
+                let origin = "origin=place_id:" + (self.startPlace?.info?.placeID)!
+                let destination = "&destination=place_id:" + (self.finishPlace?.info?.placeID)!
+                let key = "&key=AIzaSyD-Wz-BjKvWSYNiz0pttubdFtuXlOocTeg"
+                let url = NSURL(string: call+origin+destination+key)
+                let request = NSURLRequest(url: url as! URL)
+                
         })
         
         dismissKeyboard()
